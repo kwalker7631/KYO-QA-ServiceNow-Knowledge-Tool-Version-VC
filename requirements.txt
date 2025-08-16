@@ -1,0 +1,25 @@
+##requirements.txt for First AI Utility VA-1.2
+##=======================================================
+##First AI Utility - requirements.txt
+##Version: VA-1.2 (Final Alpha)
+##=======================================================
+##This file lists all the Python packages required to run the application.
+##The run.py script will automatically install these dependencies into a
+##virtual environment.
+##--- Core Functionality ---
+##Used for creating and manipulating .xlsx Excel files.
+openpyxl>=3.1.0
+
+##--- PDF and Image Processing ---
+##The core library for reading PDF files and rendering their pages as images.
+##This is essential for the OCR process.
+PyMuPDF>=1.24.0
+
+##The Python Imaging Library (PIL). It's required by pytesseract to handle
+##the image data that gets sent to the OCR engine.
+Pillow>=10.0.0
+
+##--- OCR Engine ---
+##A Python wrapper for Google's Tesseract-OCR engine. This allows the
+##Application to "read" text from the images of scanned documents.
+pytesseract>=0.3.10
