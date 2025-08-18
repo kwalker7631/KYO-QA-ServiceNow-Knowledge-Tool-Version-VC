@@ -157,6 +157,42 @@ class PatternManagerWindow(tk.Toplevel):
 # MAIN APPLICATION CLASS
 #==============================================================================
 
+
+    def toggle_fullscreen(self, event=None):
+        """Toggle fullscreen on/off with ESC; stores/restore normal geometry."""
+        try:
+            if not hasattr(self, '_normal_geometry') or not self._normal_geometry:
+                try:
+                    self._normal_geometry = self.geometry()
+                except Exception:
+                    self._normal_geometry = ''
+            self.is_fullscreen = not getattr(self, 'is_fullscreen', False)
+            self.attributes('-fullscreen', self.is_fullscreen)
+            if not self.is_fullscreen and self._normal_geometry:
+                try:
+                    self.geometry(self._normal_geometry)
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[ui] toggle_fullscreen error: {e}")
+
+    def on_exit(self):
+        """Gracefully close the app; join worker threads if present."""
+        try:
+            self.status_current_file.set('Shutting down...')
+        except Exception:
+            pass
+        for attr in ('worker_thread', 'processing_thread'):
+            t = getattr(self, attr, None)
+            try:
+                if t and getattr(t, 'is_alive', lambda: False)():
+                    t.join(timeout=1.0)
+            except Exception:
+                pass
+        try:
+            self.destroy()
+        except Exception:
+            pass
 class KyoQAToolApp(tk.Tk):
     def __init__(self):
         super().__init__(); self.title("First AI Utility - Kyocera QA Tool")

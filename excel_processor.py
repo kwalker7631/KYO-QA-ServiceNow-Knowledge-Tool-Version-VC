@@ -1,7 +1,7 @@
 # excel_processor.py
 # Author: Kenneth Walker
 # Date: 2025-08-15
-# Version: VA-1.2 (Final Alpha)
+# Version: VA-1.2 Version: VA-1.2.3 (Final Alpha)
 
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment

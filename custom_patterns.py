@@ -3,8 +3,18 @@
 # Manual edits may be overwritten.
 
 MODEL_PATTERNS = [
+    r'\bDP\-773\b',
+    r'\b4501i\b',
+    r'\b3501i\b',
+    r'\bTASKalfa\ 5551ci/4551ci/3551ci/3051ci\b',
+    r'\bFS\-C8520MFP\b',
+    r'\bFS\-C8525MFP\b',
+    r'\bFS\-6525MFP\b',
+    r'\bFS\-6530MFP\b',
+    r'\bM6026cidn\b',
+    r'\bM6526cidn\b',
+    r'\bP6030cdn\b',
 ]
 
 QA_NUMBER_PATTERNS = [
 ]
-
