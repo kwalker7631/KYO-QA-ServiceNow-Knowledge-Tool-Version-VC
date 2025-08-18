@@ -1,7 +1,7 @@
 # main_app.py
 # Author: Kenneth Walker
 # Date: 2025-08-18
-# Version: VA-2.4 (Review Tools Restored & Stable)
+# Version: VA-2.6 (Robust Review Process)
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, scrolledtext
@@ -300,7 +300,7 @@ class KyoQAToolApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.app_config = load_config()
-        self.title("First AI Utility - Kyocera QA Tool v2.4 (Stable)")
+        self.title("First AI Utility - Kyocera QA Tool v2.6 (Stable)")
         self.geometry(self.app_config.get("window_geometry", "1200x800"))
         self.state('zoomed') if sys.platform == 'win32' else self.attributes('-zoomed', True)
         
@@ -427,7 +427,6 @@ class KyoQAToolApp(tk.Tk):
     def _create_review_tab(self, parent):
         parent.columnconfigure(0, weight=1, minsize=350); parent.columnconfigure(1, weight=2); parent.rowconfigure(0, weight=1)
         
-        # Left Panel (File List)
         left_panel = ttk.Frame(parent); left_panel.grid(row=0, column=0, sticky="nsew", padx=(0,10)); left_panel.rowconfigure(1, weight=1)
         filter_frame = ttk.LabelFrame(left_panel, text=" Filter ", padding=10); filter_frame.grid(row=0, column=0, sticky="ew", pady=(0,10))
         filters = ["All", "Pass", "Needs Review", "Fail"]
@@ -439,10 +438,8 @@ class KyoQAToolApp(tk.Tk):
         self.review_tree.heading('#0', text='File Name'); self.review_tree.heading('Status', text='Status'); self.review_tree.column('#0', width=250); self.review_tree.column('Status', width=100, anchor="center")
         tree_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=self.review_tree.yview); tree_scroll.grid(row=0, column=1, sticky="ns"); self.review_tree.configure(yscrollcommand=tree_scroll.set)
         
-        # Right Panel (Document Viewer and Tools)
         right_panel = ttk.Frame(parent); right_panel.grid(row=0, column=1, sticky="nsew"); right_panel.rowconfigure(2, weight=1); right_panel.columnconfigure(0, weight=1)
         
-        # --- RESTORED: Navigation and Action Buttons ---
         nav_frame = ttk.Frame(right_panel)
         nav_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         ttk.Button(nav_frame, text="🔄 Re-scan", command=self.on_rescan).pack(side="left", padx=2)
@@ -459,7 +456,6 @@ class KyoQAToolApp(tk.Tk):
         self.doc_text.tag_configure("model_found", background=self.colors["PASTEL_GREEN"]); self.doc_text.tag_configure("qa_number_found", background=self.colors["PASTEL_YELLOW"]); self.doc_text.tag_configure("flagged_found", background=self.colors["PASTEL_RED"])
         self.doc_text.insert("1.0", "Select a file from the list to view its content."); self.doc_text.config(state=tk.DISABLED)
 
-        # --- RESTORED: Pattern Testing Panel ---
         pattern_frame = ttk.LabelFrame(right_panel, text=" Pattern Testing ", padding=10)
         pattern_frame.grid(row=3, column=0, sticky="ew", pady=(10,0))
         pattern_frame.columnconfigure(1, weight=1)
@@ -635,19 +631,28 @@ class KyoQAToolApp(tk.Tk):
         if file_data:
             self.reason_label.config(text=f"📋 Status: {file_data.get('reason', 'N/A')}")
             try:
-                text_file_path = file_data.get("text_file_path")
-                if text_file_path and Path(text_file_path).exists():
-                    full_text = Path(text_file_path).read_text(encoding='utf-8')
-                else:
-                    full_text = "Text file not found. It may have been a failed process."
+                self.doc_text.config(state=tk.NORMAL)
+                self.doc_text.delete("1.0", tk.END)
 
-                self.doc_text.config(state=tk.NORMAL); self.doc_text.delete("1.0", tk.END); self.doc_text.insert("1.0", full_text)
-                for item in file_data.get("found_items", []):
-                    tag = "flagged_found" if item.get('flagged') else 'model_found' if item['type'] == 'Model' else 'qa_number_found'
-                    self._highlight_text(item["text"], tag)
+                # --- FIX: New logic to handle failed files gracefully ---
+                if file_data.get("status") == "Fail":
+                    full_text = f"Processing failed for this file.\n\nReason: {file_data.get('reason', 'Unknown error')}"
+                    self.doc_text.insert("1.0", full_text)
+                else:
+                    text_file_path = file_data.get("text_file_path")
+                    if text_file_path and Path(text_file_path).exists():
+                        full_text = Path(text_file_path).read_text(encoding='utf-8')
+                        self.doc_text.insert("1.0", full_text)
+                        for item in file_data.get("found_items", []):
+                            tag = "flagged_found" if item.get('flagged') else 'model_found' if item['type'] == 'Model' else 'qa_number_found'
+                            self._highlight_text(item["text"], tag)
+                    else:
+                        self.doc_text.insert("1.0", "Text file not found. It may have been moved or deleted.")
+                
                 self.doc_text.config(state=tk.DISABLED)
             except Exception as e:
-                self.doc_text.config(state=tk.NORMAL); self.doc_text.delete("1.0", tk.END)
+                self.doc_text.config(state=tk.NORMAL)
+                self.doc_text.delete("1.0", tk.END)
                 self.doc_text.insert("1.0", f"Error loading text review:\n\n{e}")
                 self.doc_text.config(state=tk.DISABLED)
 
@@ -688,7 +693,7 @@ class KyoQAToolApp(tk.Tk):
         file_data = next((f for f in self.processed_files if f["id"] == selection[0]), None)
         if file_data and "original_path" in file_data:
             try:
-                os.startfile(file_data["original_path"])
+                os.startfile(Path(file_data["original_path"]))
             except Exception as e:
                 messagebox.showerror("Error", f"Could not open PDF: {e}")
 
@@ -712,9 +717,9 @@ class KyoQAToolApp(tk.Tk):
                 "reason": harvest_results.get("status_reason", "")
             })
             
-            self._populate_review_tree() # Refresh the list to show new status
-            self.review_tree.selection_set(item_id) # Re-select the item
-            self.on_file_select() # Refresh the text view
+            self._populate_review_tree()
+            self.review_tree.selection_set(item_id)
+            self.on_file_select()
             messagebox.showinfo("Success", f"Re-scan complete for {file_data['filename']}.")
 
         except Exception as e:
@@ -725,11 +730,8 @@ class KyoQAToolApp(tk.Tk):
             selected_text = self.doc_text.get(tk.SEL_FIRST, tk.SEL_LAST).strip()
             if not selected_text: return
             
-            # Simple exact match for flagging
             pattern_to_ignore = f"^{re.escape(selected_text)}$"
             
-            # This is a simplified way to add to ignored_patterns.py. A more robust
-            # implementation would parse the file properly.
             with open(IGNORED_PATTERNS_FILE, "a", encoding="utf-8") as f:
                 f.write(f"\nIGNORED_MODEL_PATTERNS.append(r'{pattern_to_ignore}')\n")
             
@@ -748,10 +750,40 @@ class KyoQAToolApp(tk.Tk):
         except tk.TclError:
             messagebox.showwarning("No Selection", "Please select text to suggest a pattern from.")
 
-    def _generalize_sample_to_regex(self, sample):
-        if not sample: return ""
-        # A simple generalization: replace digits with \d+ and wrap with word boundaries
-        return r'\b' + re.sub(r'\d+', r'\\d+', re.escape(sample)) + r'\b'
+    def _generalize_sample_to_regex(self, selection):
+        cleaned_selection = re.sub(r'[/\\]', ',', selection)
+        models = [m.strip() for m in cleaned_selection.split(',') if m.strip()]
+
+        if not models: return ""
+
+        if len(models) == 1:
+            sample = models[0]
+            pattern = re.sub(r'\d+', lambda m: f'\\d{{{len(m.group(0))}}}', re.escape(sample))
+            return rf'\b{pattern}\b'
+
+        prefix = os.path.commonprefix(models)
+        reversed_models = [m[::-1] for m in models]
+        reversed_suffix = os.path.commonprefix(reversed_models)
+        suffix = reversed_suffix[::-1]
+
+        min_len, max_len = float('inf'), 0
+        all_digits = True
+        for model in models:
+            variable_part = model[len(prefix):len(model)-len(suffix)]
+            if not variable_part: continue
+            min_len = min(min_len, len(variable_part))
+            max_len = max(max_len, len(variable_part))
+            if not variable_part.isdigit():
+                all_digits = False
+
+        if min_len > max_len: middle = ""
+        elif all_digits:
+            middle = f'\\d{{{min_len},{max_len}}}' if min_len != max_len else f'\\d{{{min_len}}}'
+        else:
+            middle = f'\\w{{{min_len},{max_len}}}' if min_len != max_len else f'\\w{{{min_len}}}'
+            
+        final_pattern = re.escape(prefix) + middle + re.escape(suffix)
+        return rf'\b{final_pattern}\b'
 
     def on_test_pattern(self):
         pattern_str = self.pattern_entry.get()
@@ -788,10 +820,9 @@ class KyoQAToolApp(tk.Tk):
         if not list_name: return
 
         try:
-            # Again, a simplified append for demonstration
             with open(CUSTOM_PATTERNS_FILE, "a", encoding="utf-8") as f:
                 f.write(f"\n{list_name}.append(r'{pattern}')\n")
-            messagebox.showinfo("Pattern Saved", f"Pattern added to {target_field}. Please restart the application to apply changes.")
+            messagebox.showinfo("Pattern Saved", f"Pattern added to {target_field}. Please Re-scan to apply.")
         except Exception as e:
             messagebox.showerror("Error", f"Could not save pattern: {e}")
 
