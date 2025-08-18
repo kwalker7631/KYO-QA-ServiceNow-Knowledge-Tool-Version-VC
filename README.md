@@ -1,103 +1,121 @@
-First AI Utility - Alpha Version VA-1.1
-overview
-The First AI Utility is a desktop application designed to automate the extraction of key information from Kyocera QA and service PDF documents. It uses a hybrid approach of direct text extraction and Optical Character Recognition (OCR) to handle both digital and scanned documents.
+# First AI Utility
 
-Its core feature is a dynamic pattern-matching system that identifies product models and QA numbers. This version introduces a flagging system to intelligently ignore incorrect or ambiguous model numbers, significantly improving accuracy and reducing the need for manual review.
+![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Version](https://img.shields.io/badge/Version-VA--1.3-orange.svg)
 
-Key Features
-Automated PDF Processing: Process entire folders of PDFs or individual files in a single batch.
+## Overview
+The **First AI Utility** is a Python-based desktop application designed to automate the extraction of key information from Kyocera QA and service PDF documents for integration with ServiceNow knowledge bases. It processes PDFs using a hybrid approach of direct text extraction (via PyMuPDF) and Optical Character Recognition (OCR) with Tesseract for scanned documents. The tool extracts product models, QA numbers, authors, and topics using a dynamic regex-based pattern-matching system, then populates ServiceNow-compatible Excel templates (e.g., `kb_knowledge.xlsx`) with enhanced formatting for professional output.
 
-Hybrid Text Extraction: Automatically uses direct text extraction and falls back to the Tesseract OCR engine for scanned documents.
+Key features include a user-friendly Tkinter GUI, live pattern management, an intelligent flagging system to ignore false positives, and robust Excel handling. Version VA-1.3 introduces support for extracting Author and Topic fields, generalized ignore lists, and improved Excel formatting (auto-adjusted columns, text wrapping, top-aligned cells).
 
-Live Pattern Management: A built-in Pattern Manager allows users to add, edit, and remove custom extraction patterns (using Regular Expressions) on-the-fly.
+## Features
+- **Automated PDF Processing**: Batch-process folders or individual PDFs, with output saved to `/OUTPUT/` as timestamped Excel files (e.g., `PROCESSED_kb_knowledge_2025-08-17_1030.xlsx`).
+- **Hybrid Text Extraction**: Uses PyMuPDF for digital PDFs; falls back to Tesseract OCR for scanned documents (improved detection with a 300-character threshold).
+- **Dynamic Pattern Matching**: Extracts Models (e.g., TASKalfa 2554ci), QA Numbers (e.g., QA_K036_SWUT-0010_SB), Authors (e.g., JUN EJIRI), and Topics (e.g., General, Desktop) using regex patterns.
+- **Live Pattern Management**: Add/edit regex patterns via the Pattern Manager for Models, QA Numbers, Authors, and Topics, stored in `custom_patterns.py`.
+- **Intelligent Flagging System**: Flag incorrect matches (e.g., invalid models) to add to type-specific ignore lists in `ignored_patterns.py`, with red highlights in the Review tab.
+- **Enhanced Excel Output**: Populates columns like Short description (QA numbers), Description (PDF filename), Meta/Product Description (models), Author, Topic, and Processing Status. Features auto-resized columns, text wrapping, and color-coded status rows (green for Pass, yellow for Needs Review, red for Fail).
+- **Automated Setup**: The `run.py` script creates a virtual environment and installs dependencies from `requirements.txt`.
 
-Interactive Document Review: A dedicated review tab allows users to inspect extracted text, see why a document was flagged, and create new patterns directly from highlighted text.
+## Installation
 
-Intelligent Flagging System: Users can highlight incorrect text and add it to an "ignore list," teaching the application to disregard false positives in all future scans.
+### Prerequisites
+- **Python 3.9+**: Download from [python.org](https://www.python.org/downloads/). For Windows, check "Add python.exe to PATH" during installation.
+- **Tesseract-OCR**: Download from [Tesseract at UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki). For Windows, select "Add Tesseract to system PATH". For Linux/macOS, install via package managers (e.g., `apt install tesseract-ocr` or `brew install tesseract`).
 
-Automated Environment Setup: A launcher script (run.py) handles the automatic creation of a Python virtual environment and installation of all required dependencies.
+### Setup Steps
+1. Clone or download the repository to a local folder.
+2. Ensure all project files (`main_app.py`, `run.py`, `requirements.txt`, etc.) are in the same directory.
+3. For Windows, double-click `START.bat`. For Linux/macOS, run `python run.py` from the terminal.
+4. On first run, the script creates a virtual environment (`/venv/`) and installs dependencies (may take a few minutes). Subsequent runs are faster.
 
-Installation and Setup
-This guide assumes a Windows operating system.
+## Usage
 
-1. Prerequisites
-Before running the application, you need two pieces of software installed on your system:
+### Processing Tab
+1. **Select Excel Template**: Click *Browse...* to choose your ServiceNow Excel template (e.g., `kb_knowledge.xlsx`).
+2. **Select PDFs**: Use *Folder* to select a directory or *Files* for individual PDFs.
+3. **Start Processing**: Click *START PROCESSING* to extract data and generate an Excel file in `/OUTPUT/`.
+4. **Monitor Progress**: View real-time updates via the status bar, progress bar, and counters.
+5. **Review Output**: Check the generated Excel file for populated columns and color-coded status.
 
-Python (Version 3.9 or newer): If you don't have Python, download the Windows installer (64-bit) from the official Python website.
+### Document Review Tab
+- **View Extracted Text**: Select a PDF from the left list to see its text, with <span style="background-color: #C8E6C9;">green highlights</span> for valid matches and <span style="background-color: #FFCDD2;">red highlights</span> for ignored matches.
+- **Flag Incorrect Matches**:
+  - Highlight incorrect text (e.g., a misidentified model like "TASKalfa-XYZ").
+  - Click *Flag Text* to add it to the appropriate ignore list (e.g., `IGNORED_MODEL_PATTERNS`).
+  - Click *Re-scan* to update highlights and status (red for ignored).
+- **Add New Patterns**:
+  - Highlight missed text (e.g., a new model or author name).
+  - Click *Suggest from Highlight* to generate a regex pattern.
+  - Test it with *Test Pattern*, then save via *Save to Custom Patterns*.
 
-Crucial Step: During installation, make sure to check the box that says "Add python.exe to PATH."
+### Excel Output
+- **Columns Populated**:
+  - *Short description*: QA numbers (e.g., QA_K036_SWUT-0010_SB) or PDF filename stem.
+  - *Description*: Full PDF filename.
+  - *Meta/Product Description*: Comma-separated model numbers (e.g., TASKalfa 2554ci, ECOSYS P8060cdn).
+  - *Author*: Extracted author names (requires patterns like `r"Author:\s*([\w\s]+)"`).
+  - *Topic*: Extracted topics (e.g., General, Desktop, based on patterns like `r"\b(General|Desktop|Applications)\b"`).
+  - *Processing Status*: Pass, Needs Review, or Fail, with color-coded rows.
+- **Formatting**: Auto-adjusted column widths, text wrapping, top-aligned cells, and bold headers for readability.
+- **Sys ID**: Preserved for ServiceNow compatibility; new rows append without modifying existing records.
 
-Tesseract-OCR Engine: This is required for the OCR functionality.
+### Example Workflow
+1. Load `kb_knowledge.xlsx` as the template.
+2. Select a folder with PDFs like `QA_K036_SWUT-0010_SB.pdf`.
+3. Process to generate an Excel file with:
+   - Short description: `QA_K036_SWUT-0010_SB`
+   - Meta: `TASKalfa 2554ci, ECOSYS P8060cdn`
+   - Author: `JUN EJIRI` (if extracted)
+   - Topic: `General`
+   - Status: `Pass` (green row)
+4. In the Review tab, flag an incorrect model (e.g., `TASKalfa-XYZ`) to ignore it in future scans.
+5. Add a new author pattern (e.g., `r"By:\s*(\w+\s\w+)"`) via Pattern Manager.
 
-Download the recommended installer from Tesseract at UB Mannheim.
+## Project File Structure
+- `START.bat`: Windows launcher.
+- `run.py`: Sets up virtual environment and dependencies.
+- `requirements.txt`: Lists Python libraries (e.g., openpyxl, PyMuPDF, pytesseract).
+- `main_app.py`: Tkinter GUI and core logic.
+- `data_harvester.py`: Extracts data using regex, filters against ignore lists.
+- `ocr_utils.py`: Handles PDF text extraction with OCR fallback.
+- `excel_processor.py`: Clones and populates Excel templates.
+- `custom_patterns.py`: Stores user-defined patterns (Models, QA Numbers, Authors, Topics).
+- `ignored_patterns.py`: Stores ignored patterns (per type).
+- `/venv/`: Auto-created virtual environment.
+- `/OUTPUT/`: Stores processed Excel files.
+- `/PDF_TEXT_OUTPUT/`: Stores raw extracted PDF text.
 
-During installation, ensure that the option to "Add Tesseract to system PATH" is selected.
+## Contributing
+We welcome contributions to enhance the First AI Utility! To contribute:
 
-2. Running the Application
-Place all the project files (main_app.py, run.py, requirements.txt, etc.) into a single folder.
+1. **Fork the Repository**: Clone and create a branch (`git checkout -b feature/your-feature`).
+2. **Add Features**:
+   - Enhance `data_harvester.py` with new regex patterns (e.g., for new model formats).
+   - Improve `excel_processor.py` with additional ServiceNow column mappings.
+   - Optimize `ocr_utils.py` (e.g., add page markers for debugging).
+3. **Test Changes**:
+   - Use `kb_knowledge.xlsx` and sample PDFs to verify output.
+   - Run `python run.py` to test in the virtual environment.
+   - Check `error.log` for issues.
+4. **Submit a Pull Request**:
+   - Include a clear description of changes and test results.
+   - Ensure code follows PEP 8 and maintains backward compatibility.
+5. **Pattern Contributions**:
+   - Add new patterns to `custom_patterns.py` (e.g., `r"Author:\s*([\w\s]+)"` for authors).
+   - Test patterns in the Review tab before submitting.
 
-Double-click the START.bat file.
+## Troubleshooting
+- **Tesseract Not Found**: Ensure Tesseract-OCR is installed and in your system PATH. For Windows, reinstall and check "Add to PATH". For Linux/macOS, verify with `tesseract --version`.
+- **Excel Errors**: Confirm `kb_knowledge.xlsx` has a Sys ID column. Missing columns (e.g., Description, Topic) are auto-added but check header case sensitivity.
+- **Syntax Errors**: Check `error.log` for details. Run `START.bat` to regenerate logs if the app crashes.
+- **No Matches Found**: Add custom patterns in the Pattern Manager (e.g., `r"\b(General|FAQ)\b"` for topics) and test in the Review tab.
+- **Output Issues**: Verify `/OUTPUT/` is writable. Check Excel file for color-coded rows to identify failures.
+- **Contact**: For persistent issues, open a GitHub issue with `error.log` and system details.
 
-The first time you run it, a command window will appear and perform a one-time setup which may take a few minutes. It will create a venv folder and install the necessary libraries. Subsequent launches will be much faster.
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-How to Use the Application
-Processing Tab
-Select Excel Template: Click the first Browse... button to select your master Excel file.
-
-Select PDFs: Use the Folder or Files buttons to select the PDF documents to process.
-
-Start Processing: Click the large red START PROCESSING button.
-
-Monitor Progress: The status bar, progress bar, and counters provide live feedback.
-
-Document Review Tab
-This tab is for inspecting results and improving the tool's accuracy.
-
-Select a File: Click on any file in the list on the left. Its extracted text will appear on the right.
-
-<span style="background-color: #C8E6C9;">Green highlights</span> are valid models found.
-
-<span style="background-color: #FFCDD2;">Red highlights</span> are models that were found but are on the ignore list.
-
-Flagging Incorrect Models:
-
-If you see an incorrect model highlighted in green, highlight the text with your mouse.
-
-Click the Flag Text button. This adds the text to the ignored_patterns.py file.
-
-Click Re-scan to see the highlight change from green to red. The document's status will update.
-
-Adding New Models:
-
-If the tool missed a model, highlight the correct model text.
-
-Click Suggest from Highlight.
-
-Click Test Pattern to confirm it works.
-
-Click the red Save to Custom Patterns button.
-
-Project File Structure
-START.bat: The main launcher for Windows users.
-
-run.py: Launcher Script. Sets up the virtual environment and installs dependencies.
-
-requirements.txt: A list of all required Python libraries.
-
-main_app.py: Core Application. Contains all the UI code and main application logic.
-
-data_harvester.py: Extraction Engine. Finds data using patterns and filters it against the ignore list.
-
-ocr_utils.py: OCR Module. Handles text extraction from PDFs.
-
-excel_processor.py: Excel Module. Manages cloning and populating the Excel template.
-
-custom_patterns.py: (Auto-created) Stores all your custom-saved patterns.
-
-ignored_patterns.py: (Auto-created) Stores all your flagged/ignored patterns.
-
-/venv/: (Auto-created) The isolated Python virtual environment.
-
-/OUTPUT/: (Auto-created) All processed Excel files are saved here.
-
-/PDF_TEXT_OUTPUT/: (Auto-created) Contains the raw text extracted from every processed PDF.
+## Acknowledgments
+Developed for the Kyocera Engineering Team by Kenneth Walker. Built with AI-assisted development to streamline QA document processing for ServiceNow integration.

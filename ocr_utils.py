@@ -1,7 +1,7 @@
 # ocr_utils.py
 # Author: Kenneth Walker
-# Date: 2025-08-15
-# Version: VA-1.0 (Final Alpha)
+# Date: 2025-08-17 (Updated)
+# Version: VA-1.1 (Increased text threshold for better scan detection)
 
 import fitz  # PyMuPDF
 import pytesseract
@@ -9,14 +9,11 @@ from PIL import Image
 import io
 from pathlib import Path
 
-# This module contains the logic for extracting text from PDFs,
-# including a robust fallback to OCR for scanned or image-based documents.
-
 # --- Configuration ---
 # If a PDF has less than this many characters of digital text,
 # it is considered a scanned document, and OCR will be triggered.
-MIN_TEXT_LENGTH_FOR_DIGITAL = 150
-OCR_DPI = 300 # Dots Per Inch for rendering PDF pages to images for OCR
+MIN_TEXT_LENGTH_FOR_DIGITAL = 300  # Increased for accuracy
+OCR_DPI = 300  # Dots Per Inch for rendering PDF pages to images for OCR
 
 def extract_text_from_pdf(pdf_path: Path) -> dict:
     """
@@ -44,7 +41,6 @@ def extract_text_from_pdf(pdf_path: Path) -> dict:
         doc.close()
 
         # --- Stage 2: Check if OCR Fallback is Needed ---
-        # If the text is very short, it's likely an image-based PDF.
         if len(full_text.strip()) < MIN_TEXT_LENGTH_FOR_DIGITAL:
             ocr_performed = True
             full_text = ""  # Reset text to be filled with OCR content
@@ -57,12 +53,9 @@ def extract_text_from_pdf(pdf_path: Path) -> dict:
 
                 # Use Tesseract to perform OCR on the image from memory
                 try:
-                    # NOTE: For this to work, Tesseract must be installed on the
-                    # system and its executable must be in the system's PATH.
                     page_text = pytesseract.image_to_string(image, lang='eng')
                     full_text += page_text + "\n"
                 except pytesseract.TesseractNotFoundError:
-                    # This is a critical, blocking error. Return immediately.
                     error_msg = (
                         "TESSERACT NOT FOUND. Please install Tesseract-OCR "
                         "and ensure its installation directory is in your system's PATH."
@@ -73,6 +66,5 @@ def extract_text_from_pdf(pdf_path: Path) -> dict:
         return {"text": full_text.strip(), "ocr_used": ocr_performed}
 
     except Exception as e:
-        # Catch any other errors during file processing (e.g., corrupted PDF)
         print(f"Critical error during text extraction for {pdf_path.name}: {e}")
         return {"text": f"Error extracting text: {e}", "ocr_used": False}
