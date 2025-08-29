@@ -3,10 +3,10 @@
 # Date: 2025-08-18 (Updated)
 # Version: VA-1.7 (Improved Auto-Formatting)
 
+import logging
 import openpyxl
 from util import excel_safe
 from openpyxl.styles import PatternFill, Font, Alignment
-from openpyxl.utils import get_column_letter
 from pathlib import Path
 from datetime import datetime
 
@@ -20,6 +20,8 @@ TOPIC_COL = "Topic"
 PRODUCT_DESC_COL = "Product Description"
 STATUS_COL = "Processing Status"
 SYS_ID_COL = "Sys ID"
+
+logger = logging.getLogger(__name__)
 
 def process_excel_file(template_path: Path, processed_data: list, output_dir: Path) -> Path:
     """
@@ -159,8 +161,8 @@ def process_excel_file(template_path: Path, processed_data: list, output_dir: Pa
                     # Find the longest line in the cell after splitting by newline
                     lines = str(cell.value).split("\n")
                     max_length = max(max_length, max(len(line) for line in lines))
-            except:
-                pass
+            except Exception as e:
+                logger.exception("Error measuring cell length: %s", e)
         
         # Add a little buffer, but cap the width at a reasonable maximum (e.g., 60)
         adjusted_width = min((max_length + 2) * 1.2, 60)
