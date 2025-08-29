@@ -64,8 +64,8 @@ def load_config():
         try:
             with open(CONFIG_FILE, 'r') as f:
                 return {**DEFAULT_CONFIG, **json.load(f)}
-        except:
-            pass
+        except Exception as e:
+            logger.exception("Failed to load config: %s", e)
     return DEFAULT_CONFIG
 
 def save_config(config):
@@ -73,8 +73,8 @@ def save_config(config):
     try:
         with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f, indent=2)
-    except:
-        pass
+    except Exception as e:
+        logger.exception("Failed to save config: %s", e)
 
 def create_tooltip(widget, text):
     """Create a tooltip for a widget"""
@@ -257,8 +257,9 @@ class PatternManagerWindow(tk.Toplevel):
                 categories[field] = self.tree.insert("", "end", text=f"📁 {field}", open=True, tags=('category',))
             try:
                 re.compile(p["pattern"]); status = "✓ Valid"; tag = 'custom' if p["type"] == "Custom" else 'builtin'
-            except:
+            except re.error as e:
                 status = "✗ Invalid"; tag = 'error'
+                logger.exception("Invalid pattern %s: %s", p.get("pattern"), e)
             self.tree.insert(categories[field], "end", iid=f"pattern_{i}", text="", values=(p["pattern"], p["type"], status), tags=(tag,))
 
     def add_pattern(self):

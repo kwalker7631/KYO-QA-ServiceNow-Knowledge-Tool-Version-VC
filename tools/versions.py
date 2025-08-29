@@ -2,7 +2,6 @@
 """Print versions of key dependencies."""
 import platform
 import subprocess
-import sys
 
 import fitz
 import openpyxl

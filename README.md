@@ -73,6 +73,14 @@ Key features include a user-friendly Tkinter GUI, live pattern management, an in
 4. In the Review tab, flag an incorrect model (e.g., `TASKalfa-XYZ`) to ignore it in future scans.
 5. Add a new author pattern (e.g., `r"By:\s*(\w+\s\w+)"`) via Pattern Manager.
 
+### Export Flow
+1. After processing, the Excel report is written atomically to the `OUTPUT/` folder.
+2. Click **📂 Reveal in Folder** (Tip: press `Ctrl+F` to focus buttons) to open the report's location.
+3. Check `error.log` if something goes wrong.
+
+### Versions Tool
+Run `python tools/versions.py` to print the installed versions of Python, PyMuPDF, openpyxl, pytesseract, Pillow, and the Tesseract CLI.
+
 ## Project File Structure
 - `START.bat`: Windows launcher.
 - `run.py`: Sets up virtual environment and dependencies.
