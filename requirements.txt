@@ -8,18 +8,21 @@
 ##virtual environment.
 ##--- Core Functionality ---
 ##Used for creating and manipulating .xlsx Excel files.
-openpyxl>=3.1.0
+openpyxl==3.1.5
 
 ##--- PDF and Image Processing ---
 ##The core library for reading PDF files and rendering their pages as images.
 ##This is essential for the OCR process.
-PyMuPDF>=1.24.0
+PyMuPDF==1.24.9
 
 ##The Python Imaging Library (PIL). It's required by pytesseract to handle
 ##the image data that gets sent to the OCR engine.
-Pillow>=10.0.0
+Pillow==10.4.0
 
 ##--- OCR Engine ---
 ##A Python wrapper for Google's Tesseract-OCR engine. This allows the
 ##Application to "read" text from the images of scanned documents.
-pytesseract>=0.3.10
+pytesseract==0.3.13
+
+##Additional utilities
+regex==2024.7.24
