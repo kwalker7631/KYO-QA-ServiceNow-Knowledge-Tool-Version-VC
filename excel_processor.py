@@ -4,6 +4,7 @@
 # Version: VA-1.7 (Improved Auto-Formatting)
 
 import openpyxl
+from util import excel_safe
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
 from pathlib import Path
@@ -44,7 +45,7 @@ def process_excel_file(template_path: Path, processed_data: list, output_dir: Pa
 
     try:
         workbook = openpyxl.load_workbook(template_path)
-        workbook.save(cloned_path)
+        excel_safe.save_workbook_safely(workbook, cloned_path)
     except Exception as e:
         raise IOError(f"Could not clone Excel template at '{template_path}'. Error: {e}")
 
@@ -171,5 +172,5 @@ def process_excel_file(template_path: Path, processed_data: list, output_dir: Pa
         sheet.column_dimensions[column].width = adjusted_width
 
     # 8. Save
-    workbook.save(cloned_path)
+    excel_safe.save_workbook_safely(workbook, cloned_path)
     return cloned_path

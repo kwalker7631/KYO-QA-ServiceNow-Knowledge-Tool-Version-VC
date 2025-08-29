@@ -17,6 +17,9 @@ import importlib.util
 import json
 from datetime import datetime
 
+import logging
+from util import excel_safe, ui_helpers
+
 # --- Core Application Modules ---
 import data_harvester
 import ocr_utils
@@ -40,6 +43,16 @@ DEFAULT_CONFIG = {
     "auto_open_report": True,
     "theme": "light"
 }
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[
+        logging.FileHandler("error.log"),
+        logging.StreamHandler(sys.stdout),
+    ],
+)
+logger = logging.getLogger(__name__)
 
 #==============================================================================
 # HELPER FUNCTIONS
@@ -402,15 +415,21 @@ class KyoQAToolApp(tk.Tk):
         self.cancel_button = ttk.Button(control_frame, text="⏹️ CANCEL PROCESSING", command=self.cancel_processing)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10,0))
         self.cancel_button.grid_remove()
+        self.reveal_button = ttk.Button(control_frame, text="📂 Reveal in Folder", command=self.reveal_output)
+        self.reveal_button.grid(row=0, column=2, sticky="e", padx=(10,0))
+        self.reveal_button.grid_remove()
+        create_tooltip(self.reveal_button, "Open the folder containing the generated Excel report")
 
-        status_frame = ttk.LabelFrame(parent, text=" Step 3: Monitor Progress ", padding=15); status_frame.grid(row=2, column=0, sticky="nsew"); status_frame.columnconfigure(0, weight=1); status_frame.rowconfigure(3, weight=1)
+        status_frame = ttk.LabelFrame(parent, text=" Step 3: Monitor Progress ", padding=15); status_frame.grid(row=2, column=0, sticky="nsew"); status_frame.columnconfigure(0, weight=1); status_frame.rowconfigure(4, weight=1)
         progress_container = ttk.Frame(status_frame); progress_container.grid(row=0, column=0, sticky="ew", pady=(0,10)); progress_container.columnconfigure(0, weight=1)
         self.pbar = ttk.Progressbar(progress_container, variable=self.progress_value, style='Red.Horizontal.TProgressbar'); self.pbar.grid(row=0, column=0, sticky="ew")
         self.progress_label = ttk.Label(progress_container, textvariable=self.progress_text_var, background=self.colors["BACKGROUND"]); self.progress_label.place(relx=0.5, rely=0.5, anchor="center")
         ttk.Label(progress_container, textvariable=self.time_remaining_var, font=("Segoe UI", 9)).grid(row=0, column=1, padx=(10,0))
-        ttk.Label(status_frame, textvariable=self.status_current_file, font=("Segoe UI", 10, "italic"), foreground="#666").grid(row=1, column=0, sticky="w", pady=5)
+        self.status_text = tk.StringVar()
+        ttk.Label(status_frame, textvariable=self.status_text, font=("Segoe UI", 10)).grid(row=1, column=0, sticky="w")
+        ttk.Label(status_frame, textvariable=self.status_current_file, font=("Segoe UI", 10, "italic"), foreground="#666").grid(row=2, column=0, sticky="w", pady=5)
         
-        stats_frame = ttk.LabelFrame(status_frame, text=" Statistics ", padding=10); stats_frame.grid(row=2, column=0, sticky="ew", pady=(10,0))
+        stats_frame = ttk.LabelFrame(status_frame, text=" Statistics ", padding=10); stats_frame.grid(row=3, column=0, sticky="ew", pady=(10,0))
         stat_cards = [("Total", self.count_total, "#0078D4"), ("Done", self.count_done, "#0078D4"), ("✓ Pass", self.count_pass, "#107C10"), ("✗ Fail", self.count_fail, "#DA291C"), ("⚠ Review", self.count_review, "#FFA500"), ("📷 OCR", self.count_ocr, "#9C27B0"), ("📄 Digital", self.count_digital, "#00BCD4")]
         for i, (label, var, color) in enumerate(stat_cards):
             card = ttk.Frame(stats_frame); card.grid(row=0, column=i, padx=5, sticky="ew"); stats_frame.columnconfigure(i, weight=1)
@@ -418,7 +437,7 @@ class KyoQAToolApp(tk.Tk):
             ttk.Label(card, textvariable=var, font=("Segoe UI", 14, "bold"), foreground=color).pack()
 
         log_frame = ttk.LabelFrame(status_frame, text=" Live Processing Log ", padding=10)
-        log_frame.grid(row=3, column=0, sticky="nsew", pady=(10,0))
+        log_frame.grid(row=4, column=0, sticky="nsew", pady=(10,0))
         log_frame.rowconfigure(0, weight=1); log_frame.columnconfigure(0, weight=1)
         self.log_text = scrolledtext.ScrolledText(log_frame, wrap="word", font=("Consolas", 9), state="disabled", relief="flat", bg=self.colors["FRAME_BG"])
         self.log_text.grid(row=0, column=0, sticky="nsew")
@@ -475,6 +494,13 @@ class KyoQAToolApp(tk.Tk):
         ttk.Button(button_frame, text="💾 Save Pattern", command=self.on_save_custom_pattern, style="Red.TButton").pack(side="left", padx=2)
 
     def log_message(self, message, level):
+        logging_map = {
+            "info": logging.INFO,
+            "warning": logging.WARNING,
+            "error": logging.ERROR,
+            "success": logging.INFO,
+        }
+        logging.log(logging_map.get(level, logging.INFO), message)
         self.log_text.config(state="normal")
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_text.insert(tk.END, f"[{timestamp}] {message}\n", (level,))
@@ -506,12 +532,13 @@ class KyoQAToolApp(tk.Tk):
         
         self.is_processing = True; self.processed_files.clear(); self.start_time = time.time(); self.cancel_event.clear()
         self.count_pass.set(0); self.count_fail.set(0); self.count_review.set(0); self.count_done.set(0); self.count_ocr.set(0); self.count_digital.set(0)
-        
-        self.start_button.grid_remove(); self.cancel_button.grid()
+
+        self.start_button.grid_remove(); self.cancel_button.grid(); self.reveal_button.grid_remove()
         self.status_indicator.config(text="● Processing", foreground="#FFA500")
         self.pbar.config(style='Red.Horizontal.TProgressbar')
         for item in self.review_tree.get_children(): self.review_tree.delete(item)
         self.log_text.config(state="normal"); self.log_text.delete("1.0", tk.END); self.log_text.config(state="disabled")
+        self.status_text.set("Processing PDFs...")
         
         thread = threading.Thread(target=self.processing_thread, args=(self.selected_pdf_paths,), daemon=True)
         thread.start()
@@ -521,6 +548,10 @@ class KyoQAToolApp(tk.Tk):
             self.cancel_event.set()
             self.cancel_button.config(state=tk.DISABLED, text="Cancelling...")
             self.log_message("Cancel request received. Finishing current file...", "warning")
+
+    def reveal_output(self):
+        if getattr(self, "last_output_file", None):
+            ui_helpers.reveal_in_explorer(self.last_output_file)
 
     def processing_thread(self, pdf_paths):
         total_files = len(pdf_paths)
@@ -594,8 +625,13 @@ class KyoQAToolApp(tk.Tk):
         self.log_message("Processing complete. Generating Excel report...", "info")
         try:
             if self.processed_files:
+                self.status_text.set("Saving Excel report...")
+                excel_safe.ensure_output_dir(OUTPUT_DIR)
                 output_file = excel_processor.process_excel_file(Path(self.excel_path_var.get()), self.processed_files, OUTPUT_DIR)
+                self.last_output_file = output_file
+                self.status_text.set("Report ready.")
                 self.status_current_file.set(f"Complete! Report saved to: {output_file.name}")
+                self.reveal_button.grid()
                 self.log_message(f"Successfully generated report: {output_file.name}", "success")
                 if self.app_config.get("auto_open_report", True):
                     self.log_message("Auto-opening report...", "info")
@@ -603,10 +639,15 @@ class KyoQAToolApp(tk.Tk):
                     else: subprocess.call(["open" if sys.platform == "darwin" else "xdg-open", str(output_file)])
             else:
                 self.status_current_file.set("No files were processed.")
+                self.status_text.set("")
+                self.reveal_button.grid_remove()
                 self.log_message("No report generated.", "warning")
         except Exception as e:
             messagebox.showerror("Error", f"Could not generate report:\n{str(e)}"); self.status_current_file.set("Error generating report")
+            self.status_text.set("Save failed")
+            self.reveal_button.grid_remove()
             self.log_message(f"Error generating report: {e}", "error")
+            logger.exception("Error generating report")
         finally:
             self.is_processing = False
             self.cancel_button.grid_remove(); self.start_button.grid()
